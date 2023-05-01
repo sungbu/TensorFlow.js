@@ -46,9 +46,12 @@
 
 
             //创建两个张量Tensor
+
+            //提取一个特征  Feature（inputs）
             const featureValues = await points.map(p => p.x).toArray();
             const featureTensor = tf.tensor2d(featureValues,[featureValues.length, 1]);
 
+            //提取一个标签   lable（outputs）
             const lableValues = await points.map(p => p.y).toArray();
             const lableTensor = tf.tensor2d(lableValues,[lableValues.length, 1]);
 
