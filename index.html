@@ -41,58 +41,52 @@
             };
         }
 
-        //0-1之间的数据还原成真实数据
-        function denormalise(tensor,min,max){
-            const denormalisedTensor = tensor.mul(max.sub(min)).add(min);
-            return denormalisedTensor;
-        }
-
-
         async function run () {
             //加载csv数据集文件
             const houseScalesDataset = tf.data.csv("http://127.0.0.1:5500/kc_house_data.csv");
-            //获取10条数据
-            const sampleDataset = houseScalesDataset.take(10);
-            //转成数组
-            const dataArray = await sampleDataset.toArray();
-            console.log(dataArray);
 
             //为图表做准备 x轴为sqft_living  y轴为price
-            const points = houseScalesDataset.map(record => ({
+            const pointsDataset = houseScalesDataset.map(record => ({
                 x: record.sqft_living,
                 y: record.price
             }))
+            const points = await pointsDataset.toArray();
 
-            // console.log(await points.toArray());
+            //方便拆分数组 如果数组长度为奇数 85行会报错
+            if(points.length % 2 !== 0){
+                points.pop();
+            }
 
-            plot(await points.toArray(),"Square Feet")
+            //洗牌
+            tf.util.shuffle(points);
+
+            plot(points,"Square Feet")
 
 
             //创建两个张量Tensor
 
             //提取一个特征  Feature（inputs）
-            const featureValues = await points.map(p => p.x).toArray();
+            const featureValues = points.map(p => p.x);
             const featureTensor = tf.tensor2d(featureValues,[featureValues.length, 1]);
 
             //提取一个标签   lable（outputs）
-            const lableValues = await points.map(p => p.y).toArray();
+            const lableValues = points.map(p => p.y);
             const lableTensor = tf.tensor2d(lableValues,[lableValues.length, 1]);
 
-            //打印数据
-            featureTensor.print();
-            lableTensor.print();
 
             //数据归一化 0-1区间
             const normalisedFeature = normalise(featureTensor);
             const normalisedLable = normalise(lableTensor);
 
-            //打印数据
             normalisedFeature.tensor.print();
             normalisedLable.tensor.print();
 
-            //将0-1的数据转换成真实数据
-            denormalise(normalisedFeature.tensor,normalisedFeature.min,normalisedFeature.max).print();
-            denormalise(normalisedLable.tensor,normalisedLable.min,normalisedLable.max).print();
+            //将数组按 50% 50% 的比例拆除成两个数组
+            const [trainingFeatureTensor,testingFeatureTensor] = tf.split(normalisedFeature.tensor,2);
+            const [trainingLableTensor,testingLableTensor] = tf.split(normalisedLable.tensor,2);
+
+            trainingFeatureTensor.print(true);
+
         }
         run();
     </script>
