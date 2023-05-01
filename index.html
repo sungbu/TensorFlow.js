@@ -49,12 +49,13 @@
             //epochs: 20：训练轮数，即训练数据集中的所有样本都被用于训练的次数。在这里是20轮，表示数据集将会被训练20次。
             //callbacks: {...}：回调函数对象，这里只有一个回调函数onEpochEnd。
             return model.fit(trainingFeatureTensor,trainingLableTensor,{
-                epochs : 20,
+                epochs : 20, //多少个纪元
+                batchSize: 32, //批大小，即每个批次的样本数。在这里是32个样本，表示每次训练32个样本。
+                validationSplit: 0.2, //用训练集的20%的数据作为验证集
                 callbacks: {
                     //onEpochEnd: (epach,log) => console.log(`Epochs: ${epach} loss: ${log.loss}`) //epach: 第几纪元年 loss包含了当前epoch的损失函数值和其他度量值。
-                    batchSize: 512,
                     onEpochEnd,
-                    onBatchEnd
+                    //onBatchEnd
                 }
             })
         }
@@ -151,7 +152,21 @@
             tfvis.show.layer({name: "layer 1"},layer);
 
             //训练模型
-            await trainModel(model,trainingFeatureTensor,trainingLableTensor)
+            const result = await trainModel(model,trainingFeatureTensor,trainingLableTensor);
+            console.log(result)
+
+            //训练集
+            const trainingLoss = result.history.loss.pop();
+            console.log(`Training loss: ${trainingLoss}`); //打印训练集损失率
+
+            //验证集
+            const validationLoss = result.history.val_loss.pop();
+            console.log(`Validation loss: ${validationLoss}`);//打印验证集损失率
+
+            //测试集
+            const lossTensor = model.evaluate(testingFeatureTensor,testingFeatureTensor);
+            const loss = await lossTensor.dataSync();
+            console.log(`Testing loss: ${loss}`);//打印测试集损失率
         }
         
         run();
