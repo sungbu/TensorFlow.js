@@ -25,6 +25,29 @@
                 }
             )
         }
+
+        //讲数值归并到0-1区间
+        //公式 x = x - min(x) / max(x) - min(x)
+        function normalise(tensor) {
+            const min = tensor.min();
+            const max = tensor.max();
+
+            const normalisedTensor = tensor.sub(min).div(max.sub(min));
+
+            return {
+                tensor: normalisedTensor,
+                min,
+                max
+            };
+        }
+
+        //0-1之间的数据还原成真实数据
+        function denormalise(tensor,min,max){
+            const denormalisedTensor = tensor.mul(max.sub(min)).add(min);
+            return denormalisedTensor;
+        }
+
+
         async function run () {
             //加载csv数据集文件
             const houseScalesDataset = tf.data.csv("http://127.0.0.1:5500/kc_house_data.csv");
@@ -55,9 +78,21 @@
             const lableValues = await points.map(p => p.y).toArray();
             const lableTensor = tf.tensor2d(lableValues,[lableValues.length, 1]);
 
+            //打印数据
             featureTensor.print();
             lableTensor.print();
 
+            //数据归一化 0-1区间
+            const normalisedFeature = normalise(featureTensor);
+            const normalisedLable = normalise(lableTensor);
+
+            //打印数据
+            normalisedFeature.tensor.print();
+            normalisedLable.tensor.print();
+
+            //将0-1的数据转换成真实数据
+            denormalise(normalisedFeature.tensor,normalisedFeature.min,normalisedFeature.max).print();
+            denormalise(normalisedLable.tensor,normalisedLable.min,normalisedLable.max).print();
         }
         run();
     </script>
