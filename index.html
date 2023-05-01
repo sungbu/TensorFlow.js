@@ -36,6 +36,13 @@
 
         //训练模型函数
         async function trainModel(model,trainingFeatureTensor,trainingLableTensor) {
+
+            //图表监控学习进度和效率
+            const {onEpochEnd,onBatchEnd} = tfvis.show.fitCallbacks(
+                {name: "Training Performance"},
+                ['loss']
+            )
+
             //函数训练模型，返回一个Promise对象。其中的参数包括
             //trainingFeatureTensor：训练特征张量，用于训练模型。
             //trainingLableTensor：训练标签张量，用于训练模型。
@@ -44,7 +51,10 @@
             return model.fit(trainingFeatureTensor,trainingLableTensor,{
                 epochs : 20,
                 callbacks: {
-                    onEpochEnd: (epach,log) => console.log(`Epochs: ${epach} loss: ${log.loss}`) //epach: 第几纪元年 loss包含了当前epoch的损失函数值和其他度量值。
+                    //onEpochEnd: (epach,log) => console.log(`Epochs: ${epach} loss: ${log.loss}`) //epach: 第几纪元年 loss包含了当前epoch的损失函数值和其他度量值。
+                    batchSize: 512,
+                    onEpochEnd,
+                    onBatchEnd
                 }
             })
         }
