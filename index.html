@@ -6,9 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1.快速上手</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+    <!-- 图标库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
 </head>
 <body>
     <script>
+        //画图表
+        async function plot(pointArray,featureName) {
+            tfvis.render.scatterplot(
+                //图表名字
+                {name: `${featureName} vs House Price`},
+                //数据和数据类型名
+                {values:[pointArray], series:["original"]},
+                //x，y轴名称
+                {
+                    xLabel: featureName,
+                    yLabel: "Price"
+                }
+            )
+        }
         async function run () {
             //加载csv数据集文件
             const houseScalesDataset = tf.data.csv("http://127.0.0.1:5500/kc_house_data.csv");
@@ -17,6 +33,16 @@
             //转成数组
             const dataArray = await sampleDataset.toArray();
             console.log(dataArray);
+
+            //为图表做准备 x轴为sqft_living  y轴为price
+            const points = houseScalesDataset.map(record => ({
+                x: record.sqft_living,
+                y: record.price
+            }))
+
+            console.log(await points.toArray());
+
+            plot(await points.toArray(),"Square Feet")
 
         }
         run();
