@@ -5,14 +5,30 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1.快速上手</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
 </head>
 <body>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
     <script>
-         // Define a model for linear regression. 
-         const model = tf.sequential(); 
-         model.add(tf.layers.dense({units: 1, inputShape: [1]}));
+        function createLotsOfTensors() {
+
+            for(let i = 0; i < 1000; i ++){
+                const a = tf.tensor1d([1,2,3]);
+                const b = tf.scalar(i);
+                a.mul(b).print();
+            }
+        }
+        //没有垃圾回收  占用内存
+        // createLotsOfTensors();
+
+
+        //使用tidy清理垃圾 回收内存空间
+        tf.tidy(createLotsOfTensors);
     </script>
+    <h1>Number of tensors in memory:
+        <script>
+            //检查内存使用量
+            document.write(tf.memory().numTensors);
+        </script>
+    </h1>
 </body>
 </html>
