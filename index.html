@@ -106,7 +106,19 @@
 
             const model = createModel();
 
+            //模型的摘要 状态信息（利用控制台显示）
+            model.summary();
+
+            //模型的摘要 状态信息 (利用图表显示)
+            tfvis.show.modelSummary({name: "model summary"},model);
+
+            //获取第一层layout
+            const layer = model.getLayer(undefined,0);
+
+            //layout1的摘要 状态信息 (利用图表显示)
+            tfvis.show.layer({name: "layer 1"},layer);
         }
+        
         run();
     </script>
 </body>
