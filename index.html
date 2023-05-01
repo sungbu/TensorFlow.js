@@ -27,10 +27,26 @@
             const optimizer = tf.train.sgd(0.1);//定义一个随机梯度下降（SGD）优化器，用于更新模型中的权重和偏置参数。学习率是0.1，它控制了每个参数在每个训练步骤中更新的大小。
             //编译模型，指定损失函数。这里使用均方误差（mean squared error）作为损失函数，因为它是一个适合回归问题的标准损失函数。我们的目标是最小化预测值与实际值之间的均方误差。
             model.compile({
-                loss: "meanSquaredError", 
+                loss: "meanSquaredError",
+                optimizer
             })
 
             return model;
+        }
+
+        //训练模型函数
+        async function trainModel(model,trainingFeatureTensor,trainingLableTensor) {
+            //函数训练模型，返回一个Promise对象。其中的参数包括
+            //trainingFeatureTensor：训练特征张量，用于训练模型。
+            //trainingLableTensor：训练标签张量，用于训练模型。
+            //epochs: 20：训练轮数，即训练数据集中的所有样本都被用于训练的次数。在这里是20轮，表示数据集将会被训练20次。
+            //callbacks: {...}：回调函数对象，这里只有一个回调函数onEpochEnd。
+            return model.fit(trainingFeatureTensor,trainingLableTensor,{
+                epochs : 20,
+                callbacks: {
+                    onEpochEnd: (epach,log) => console.log(`Epochs: ${epach} loss: ${log.loss}`) //epach: 第几纪元年 loss包含了当前epoch的损失函数值和其他度量值。
+                }
+            })
         }
 
 
@@ -123,6 +139,9 @@
 
             //layout1的摘要 状态信息 (利用图表显示)
             tfvis.show.layer({name: "layer 1"},layer);
+
+            //训练模型
+            await trainModel(model,trainingFeatureTensor,trainingLableTensor)
         }
         
         run();
