@@ -11,6 +11,23 @@
 </head>
 <body>
     <script>
+        //创建模型
+        function createModel() {
+            //创建一个顺序模型
+            const model = tf.sequential();
+
+            //创建一个密集层
+            model.add(tf.layers.dense({
+                units: 1, //节点数量
+                useBias: true, //是否使用偏置
+                activation: "linear", //使用线性激活函数
+                inputDim: 1
+            }));
+
+            return model;
+        }
+
+
         //画图表
         async function plot(pointArray,featureName) {
             tfvis.render.scatterplot(
@@ -86,6 +103,8 @@
             const [trainingLableTensor,testingLableTensor] = tf.split(normalisedLable.tensor,2);
 
             trainingFeatureTensor.print(true);
+
+            const model = createModel();
 
         }
         run();
