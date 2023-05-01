@@ -40,9 +40,20 @@
                 y: record.price
             }))
 
-            console.log(await points.toArray());
+            // console.log(await points.toArray());
 
             plot(await points.toArray(),"Square Feet")
+
+
+            //创建两个张量Tensor
+            const featureValues = await points.map(p => p.x).toArray();
+            const featureTensor = tf.tensor2d(featureValues,[featureValues.length, 1]);
+
+            const lableValues = await points.map(p => p.y).toArray();
+            const lableTensor = tf.tensor2d(lableValues,[lableValues.length, 1]);
+
+            featureTensor.print();
+            lableTensor.print();
 
         }
         run();
