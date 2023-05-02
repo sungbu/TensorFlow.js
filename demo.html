@@ -45,7 +45,7 @@
             //创建一个密集层 向模型中添加一个密集层，即全连接层。这个层有一个节点，即输出一个值，同时它接受一个单一的数值作为输入。其中的参数包括：
             model.add(tf.layers.dense({
                 units: 1, //点的数量是1，这是线性回归的标准设置。
-                useBias: true, //这个层是否包含偏置参数，也就是截距项。默认情况下是true，意味着这个层有一个截距项。
+                useBias: false, //这个层是否包含偏置参数，也就是截距项。默认情况下是true，意味着这个层有一个截距项。
                 activation: "linear", //使用线性激活函数。由于这是一个线性回归模型，所以激活函数应该是线性的。
                 inputDim: 1 //输入数据的维度是1，这是因为我们只有一个单一的输入变量。
             }));
@@ -81,19 +81,52 @@
                 callbacks: {
                     //onEpochEnd: (epach,log) => console.log(`Epochs: ${epach} loss: ${log.loss}`) //epach: 第几纪元年 loss包含了当前epoch的损失函数值和其他度量值。
                     onEpochEnd,
-                    //onBatchEnd
+                    //onBatchEnd,
+                    onEpochBegin: async function () {
+                        await plotPredictionLine();
+                        //获取第一层layout
+                        const layer = model.getLayer(undefined,0);
+
+                        //layout1的摘要 状态信息 (利用图表显示)
+                        tfvis.show.layer({name: "layer 1"},layer);
+                    }
                 }
             })
+        }
+        let points;
+        //预测线
+        async function plotPredictionLine() {
+            const [xs,ys] = tf.tidy(() => {
+                const normalisedXs = tf.linspace(0,1,100);
+                const normalisedYs = model.predict(normalisedXs.reshape([100,1]));
+
+                const xs = denormalise(normalisedXs,normalisedFeature.min,normalisedFeature.max);
+                const ys = denormalise(normalisedYs,normalisedLable.min,normalisedLable.max);
+
+                return [ xs.dataSync(), ys.dataSync()];
+            })
+
+            const predicitedPoints = Array.from(xs).map((val,index) => {
+                return {x:val, y: ys[index]}
+            });
+
+            await plot(points,"Square feet", predicitedPoints);
         }
 
 
         //画图表
-        async function plot(pointArray,featureName) {
+        async function plot(pointArray,featureName, predicitedPointsArray = null) {
+            const values = [pointArray.splice(0,1000)];
+            const series = ["original"];
+            if(Array.isArray(predicitedPointsArray)){
+                values.push(predicitedPointsArray);
+                series.push("predicited");
+            }
             tfvis.render.scatterplot(
                 //图表名字
                 {name: `${featureName} vs House Price`},
                 //数据和数据类型名
-                {values:[pointArray], series:["original"]},
+                {values, series},
                 //x，y轴名称
                 {
                     xLabel: featureName,
@@ -123,7 +156,7 @@
             return denormalisedTensor;
         }
 
-
+        
         let normalisedFeature,normalisedLable;
         let trainingFeatureTensor,testingFeatureTensor,trainingLableTensor,testingLableTensor;
         async function run () {
@@ -135,7 +168,7 @@
                 x: record.sqft_living,
                 y: record.price
             }))
-            const points = await pointsDataset.toArray();
+            points = await pointsDataset.toArray();
 
             //方便拆分数组 如果数组长度为奇数 85行会报错
             if(points.length % 2 !== 0){
@@ -191,6 +224,8 @@
             const predictInput = parseInt(document.getElementById('prediction-input').value);
             if(isNaN(predictInput)){
                 alert('please enter a valid number');
+            }else if(predictInput < 200){
+                alert('please enter a above 200 sqft');
             }else{
                 tf.tidy(() => {
                     const inputTensor = tf.tensor1d([predictInput]);
@@ -205,7 +240,6 @@
             }
         }
         async function load() {
-            console.log(111)
             const storageKey = `localstorage://${storageId}`;
             const models = await tf.io.listModels();
             const modelInfo = models[storageKey];
@@ -220,6 +254,8 @@
 
                 //layout1的摘要 状态信息 (利用图表显示)
                 tfvis.show.layer({name: "layer 1"},layer);
+
+                await plotPredictionLine();
 
                 document.getElementById("model-status").innerHTML = `trained (saved ${modelInfo.dateSaved})`;
 
@@ -265,6 +301,8 @@
 
             //layout1的摘要 状态信息 (利用图表显示)
             tfvis.show.layer({name: "layer 1"},layer);
+
+            await plotPredictionLine();
 
             //训练模型
             const result = await trainModel(model,trainingFeatureTensor,trainingLableTensor);
