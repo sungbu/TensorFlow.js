@@ -32,10 +32,56 @@
         .content button.active{
             opacity: 1;
         }
+        .visorContent{
+            background-color: #9fbccc;
+            padding: 30px;
+        }
+        .visorContent button {
+            background-color: #337abc;
+            border: none;
+            padding: 10px 20px;
+            color: #ffffff;
+        }
+        .header h3{
+            color: #527091;
+        }
+        .title{
+            color: #ccc;
+
+        }
+        .content button{
+            padding: 10px 20px;
+            margin-top: 10px;
+        }
+        h5{
+            font-size: 20px;
+        }
+        .status{
+            background-color: #ccc;
+        }
+        .left > *{
+            display: block;
+            width: 300px;
+            margin: 0 auto;
+            text-align: left;
+            padding-left: 5px;
+        }
+        .right > *{
+            display: block;
+            width: 300px;
+            margin: 0 auto;
+            text-align: left;
+            padding-left: 5px;
+        }
+        .right input{
+            width: 300px;
+            padding: 20px;
+            font-size: 20px;
+        }
     </style>
 
     <script>
-
+        // tfvis.visor().close();
         let model;
         //创建模型
         function createModel() {
@@ -45,11 +91,12 @@
             //创建一个密集层 向模型中添加一个密集层，即全连接层。这个层有一个节点，即输出一个值，同时它接受一个单一的数值作为输入。其中的参数包括：
             model.add(tf.layers.dense({
                 units: 1, //点的数量是1，这是线性回归的标准设置。
-                useBias: false, //这个层是否包含偏置参数，也就是截距项。默认情况下是true，意味着这个层有一个截距项。
+                useBias: true, //这个层是否包含偏置参数，也就是截距项。默认情况下是true，意味着这个层有一个截距项。
                 activation: "linear", //使用线性激活函数。由于这是一个线性回归模型，所以激活函数应该是线性的。
                 inputDim: 1 //输入数据的维度是1，这是因为我们只有一个单一的输入变量。
             }));
 
+            // const optimizer = tf.train.adam();
             const optimizer = tf.train.sgd(0.1);//定义一个随机梯度下降（SGD）优化器，用于更新模型中的权重和偏置参数。学习率是0.1，它控制了每个参数在每个训练步骤中更新的大小。
             //编译模型，指定损失函数。这里使用均方误差（mean squared error）作为损失函数，因为它是一个适合回归问题的标准损失函数。我们的目标是最小化预测值与实际值之间的均方误差。
             model.compile({
@@ -93,7 +140,21 @@
                 }
             })
         }
-        let points;
+
+        async function plotParams(weight,bais) {
+            model.getLayer(null,0).setWeights([
+                tf.tensor2d([[weight]]),
+                tf.tensor1d([bais])
+            ])
+            await plotPredictionLine();
+            //获取第一层layout
+            const layer = model.getLayer(undefined,0);
+
+            //layout1的摘要 状态信息 (利用图表显示)
+            tfvis.show.layer({name: "layer 1"},layer);
+        }
+
+        
         //预测线
         async function plotPredictionLine() {
             const [xs,ys] = tf.tidy(() => {
@@ -109,15 +170,17 @@
             const predicitedPoints = Array.from(xs).map((val,index) => {
                 return {x:val, y: ys[index]}
             });
-
-            await plot(points,"Square feet", predicitedPoints);
+            console.log(111)
+            await plot(points,"Square Feet", predicitedPoints);
         }
 
 
         //画图表
         async function plot(pointArray,featureName, predicitedPointsArray = null) {
-            const values = [pointArray.splice(0,1000)];
+            // console.log(pointArray);
+            const values = [[...pointArray].splice(0,1000)];
             const series = ["original"];
+            console.log(pointArray[1000],111)
             if(Array.isArray(predicitedPointsArray)){
                 values.push(predicitedPointsArray);
                 series.push("predicited");
@@ -156,7 +219,7 @@
             return denormalisedTensor;
         }
 
-        
+        let points;
         let normalisedFeature,normalisedLable;
         let trainingFeatureTensor,testingFeatureTensor,trainingLableTensor,testingLableTensor;
         async function run () {
@@ -332,7 +395,7 @@
     <div class="header">
         <h3>Linear regression with TensorFlow.js</h3>
         <p>Train a model to predict house price from living space.</p>
-        <div>
+        <div class="visorContent">
             <button onclick="toggleVisor()">TOGGLE VISOR</button>
         </div>
     </div>
@@ -340,12 +403,12 @@
         <div class="left">
             <h5>Train & Test</h5>
             <div class="Training_status">
-                <p>Tranining Status:</p>
-                <p id="model-status">Loading data...</p>
+                <p class="title">Tranining Status:</p>
+                <p class="status"  id="model-status">Loading data...</p>
             </div>
             <div class="TestingStatus">
-                <p>Tranining Status:</p>
-                <p id="test-status">Not Yet Tested</p>
+                <p class="title">Tranining Status:</p>
+                <p class="status" id="test-status">Not Yet Tested</p>
             </div>
             <div>
                 <button id="train-button" onclick="train()">TRAIN NEW MODEL</button>
@@ -360,7 +423,7 @@
         <div class="right">
             <h5>Predic</h5>
             <div class="square">
-                <p>Square feet of living spance:</p>
+                <p class="title">Square feet of living spance:</p>
                 <input type="number" id="prediction-input" placeholder="2000">
             </div>
 
