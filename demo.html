@@ -92,12 +92,12 @@
             model.add(tf.layers.dense({
                 units: 1, //点的数量是1，这是线性回归的标准设置。
                 useBias: true, //这个层是否包含偏置参数，也就是截距项。默认情况下是true，意味着这个层有一个截距项。
-                activation: "linear", //使用线性激活函数。由于这是一个线性回归模型，所以激活函数应该是线性的。
+                activation: "sigmoid", //使用线性激活函数。由于这是一个线性回归模型，所以激活函数应该是线性的。
                 inputDim: 1 //输入数据的维度是1，这是因为我们只有一个单一的输入变量。
             }));
 
-            // const optimizer = tf.train.adam();
-            const optimizer = tf.train.sgd(0.1);//定义一个随机梯度下降（SGD）优化器，用于更新模型中的权重和偏置参数。学习率是0.1，它控制了每个参数在每个训练步骤中更新的大小。
+            const optimizer = tf.train.adam();
+            // const optimizer = tf.train.sgd(0.1);//定义一个随机梯度下降（SGD）优化器，用于更新模型中的权重和偏置参数。学习率是0.1，它控制了每个参数在每个训练步骤中更新的大小。
             //编译模型，指定损失函数。这里使用均方误差（mean squared error）作为损失函数，因为它是一个适合回归问题的标准损失函数。我们的目标是最小化预测值与实际值之间的均方误差。
             model.compile({
                 loss: "meanSquaredError",
@@ -170,7 +170,6 @@
             const predicitedPoints = Array.from(xs).map((val,index) => {
                 return {x:val, y: ys[index]}
             });
-            console.log(111)
             await plot(points,"Square Feet", predicitedPoints);
         }
 
