@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.0.0/dist/tf.min.js"></script>
+    <!-- 图标库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
+    <script src="./mnist.js"></script>
+    <style>
+        .header {
+            text-align: center;
+        }
+
+        .content {
+            text-align: center;
+            margin-top: 100px;
+        }
+
+        .content .left {
+            float: left;
+            width: 50%;
+        }
+
+        .content .right {
+            float: right;
+            width: 50%;
+        }
+
+        .content button {
+            opacity: 0.2;
+        }
+
+        .content button.active {
+            opacity: 1;
+        }
+
+        .visorContent {
+            background-color: #9fbccc;
+            padding: 30px;
+        }
+
+        .visorContent button {
+            background-color: #337abc;
+            border: none;
+            padding: 10px 20px;
+            color: #ffffff;
+        }
+
+        .header h3 {
+            color: #527091;
+        }
+
+        .title {
+            color: #ccc;
+
+        }
+
+        .content button {
+            padding: 10px 20px;
+            margin-top: 10px;
+        }
+
+        h5 {
+            font-size: 20px;
+        }
+
+        .status {
+            background-color: #ccc;
+        }
+
+        .left>* {
+            display: block;
+            width: 300px;
+            margin: 0 auto;
+            text-align: left;
+            padding-left: 5px;
+        }
+
+        .right>* {
+            display: block;
+            width: 300px;
+            margin: 0 auto;
+            text-align: left;
+            padding-left: 5px;
+        }
+
+        .right input {
+            width: 300px;
+            padding: 20px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h3>数字识别</h3>
+        <p>用于识别数字0-9的深度学习神经网络。</p>
+        <div class="visorContent">
+            <button onclick="toggleVisor()">显示图表信息</button>
+        </div>
+    </div>
+    <div class="content">
+        <div class="left">
+            <h5>训练&测试</h5>
+            <div class="Training_status">
+                <p class="title">学习状态:</p>
+                <p class="status" id="model-status">未加载数据</p>
+            </div>
+            <div class="TestingStatus">
+                <p class="title">测试状态:</p>
+                <p class="status" id="test-status">未进行测试</p>
+            </div>
+            <div>
+                <button id="train-button" onclick="train()">创建新的模型</button>
+                <button id="test-button" onclick="test()">测试模型</button>
+            </div>
+            <div>
+                <button id="load-button" onclick="load()">加载模型</button>
+                <button id="save-button" onclick="save()"> 保存模型</button>
+            </div>
+        </div>
+
+        <div class="right">
+            <h5>实验</h5>
+            <div class="canvasContent">
+                <canvas id="canvas" width="280" height="280" style="background-color: #000;"></canvas>
+                <button id="predict-button" onclick="predict()">预测</button>
+                <div>预测结果为：<span id="predNum"></span></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById("train-button").setAttribute("class", "active");
+        document.getElementById("load-button").setAttribute("class", "active");
+        function toggleVisor() {
+            tfvis.visor().toggle();
+        }
+        function train() {
+            document.getElementById("train-button").removeAttribute("class", "active");
+            document.getElementById("load-button").removeAttribute("class", "active");
+            document.getElementById("model-status").innerHTML = "训练中..."
+            run();
+        }
+        async function test() {
+            const testLossTensor = await model.evaluate( testImgTensor,testLabTensor);
+            const acc = await testLossTensor[1].dataSync();
+            const loss = await testLossTensor[0].dataSync();
+            document.getElementById('test-status').innerHTML = `测试结果：<br/>loss: ${loss} <br/>acc: ${acc}`;
+        }
+
+
+        async function load() {
+            const storageKey = `localstorage://${storageId}`;
+            const models = await tf.io.listModels();
+            const modelInfo = models[storageKey];
+
+            if (modelInfo) {
+                model = await tf.loadLayersModel(storageKey);
+
+                document.getElementById("model-status").innerHTML = `训练结束 (已保存） ${modelInfo.dateSaved})`;
+
+
+                document.getElementById(`test-button`).removeAttribute('class', "active");
+                document.getElementById("predict-button").setAttribute("class", "active");
+
+            }
+        }
+
+        const storageId = "digital-regression"
+        async function save() {
+            const saveResults = await model.save(`localstorage://${storageId}`);
+
+            document.getElementById("model-status").innerHTML = `训练结束 (已保存） ${saveResults.modelArtifactsInfo.dateSaved})`;
+
+        }
+        async function predict() {
+            
+            const input = tf.tidy(() => {
+                const predictImg_org = tf.image.resizeBilinear(
+                    tf.browser.fromPixels(canvas),
+                    [28,28],
+                    true
+                ).slice([0,0,0],[28,28,1])
+                .toFloat()
+                .reshape([1,28,28,1]);
+                return predictImg = tf.mul(tf.sub(predictImg_org, tf.scalar(127.5)), tf.scalar(1 / 127.5));
+            });
+
+            const pred = model.predict(input);
+            document.getElementById("predNum").innerHTML = pred.argMax(1).dataSync();
+            const predArr = [];
+            pred.dataSync().forEach((data,index) => {
+                predArr.push({
+                    index,
+                    value:data < 0 ? 0 : data
+                })
+            })
+            tfvis.render.barchart({ name: '数字识别结果', tab: '验证' }, predArr);
+        }
+        let canvas;
+        function draw() {
+            canvas = document.getElementById('canvas');
+            let context = canvas.getContext('2d');
+            let isDrawing = false;
+
+            // 监听鼠标按下事件
+            canvas.addEventListener('mousedown', function (e) {
+                isDrawing = true;
+                draw(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, false);
+            });
+
+            // 监听鼠标移动事件
+            canvas.addEventListener('mousemove', function (e) {
+                if (isDrawing) {
+                    draw(e.clientX - canvas.offsetLeft, e.clientY - canvas.offsetTop, true);
+                }
+            });
+
+            // 监听鼠标松开事件
+            canvas.addEventListener('mouseup', function (e) {
+                isDrawing = false;
+            });
+
+            // 监听鼠标离开画布事件
+            canvas.addEventListener('mouseleave', function (e) {
+                isDrawing = false;
+            });
+
+            document.addEventListener('keydown',function(e) {
+                if(e.keyCode == 32){
+                    context.clearRect(0,0,canvas.width,canvas.height)
+                }
+            })
+
+            // 绘画函数
+            function draw(x, y, isDown) {
+                if (isDown) {
+                    context.beginPath();
+                    context.strokeStyle = "#FFFFFF";
+                    context.lineWidth = 10;
+                    context.lineJoin = "round";
+                    context.moveTo(lastX, lastY);
+                    context.lineTo(x, y);
+                    context.closePath();
+                    context.stroke();
+                }
+                lastX = x;
+                lastY = y;
+            }
+        }
+        draw();
+
+        function dataPromise() {
+            return new Promise((res, rej) => {
+                loadMNIST(data => {
+                    res(data);
+                })
+            })
+        }
+        let trainLabTensor, trainImgTensor;
+        let testLabTensor, testImgTensor;
+        async function tensorData() {
+            const mnist = await dataPromise();
+            const trainImg_org = tf.tensor2d(mnist.train_images.slice(0, 60000));
+            const trainLab_org = tf.tensor1d(mnist.train_labels.slice(0, 60000));
+            const trainImg = tf.mul(tf.sub(trainImg_org, tf.scalar(127.5)), tf.scalar(1 / 127.5));
+
+            trainLabTensor = tf.oneHot((trainLab_org), 10);
+            trainImgTensor = trainImg.reshape([60000, 28, 28, 1]);
+
+
+            const testImg_org = tf.tensor2d(mnist.test_images.slice(0, 10000));
+            const testLab_org = tf.tensor1d(mnist.test_labels.slice(0, 10000));
+            const testImg = tf.mul(tf.sub(testImg_org, tf.scalar(127.5)), tf.scalar(1 / 127.5));
+
+            testLabTensor = tf.oneHot((testLab_org), 10);
+            testImgTensor = testImg.reshape([10000, 28, 28, 1]);
+
+
+            trainImg_org.dispose();
+            trainLab_org.dispose();
+            trainImg.dispose();
+            testImg_org.dispose();
+            testLab_org.dispose();
+            testImg.dispose();
+
+        }
+
+        
+        async function run() {
+            await tensorData();
+            const model = createModel();
+
+
+
+            //图表监控学习进度和效率
+            const { onEpochEnd, onBatchEnd } = tfvis.show.fitCallbacks(
+                { name: "Training Performance" },
+                ['loss', 'val_loss', 'acc', 'val_acc']
+            )
+            const result = await model.fit(trainImgTensor, trainLabTensor, {
+                epochs: 20,
+                batchSize: 128,
+                validationSplit: 0.2,
+                callbacks: {
+                    onEpochEnd,
+                    // onBatchEnd
+                }
+            })
+            const trainingLoss = result.history.loss.pop();
+            document.getElementById('model-status').innerHTML = `训练结束（未保存）<br/> Loss: ${trainingLoss.toPrecision(5)}`;
+            document.getElementById('test-button').setAttribute("class", "active");
+            document.getElementById('save-button').setAttribute("class", "active");
+            document.getElementById("predict-button").setAttribute("class", "active");
+            model.summary();
+        }
+        let model;
+        function createModel() {
+
+            model = tf.sequential();
+            //输入层
+            // model.add(tf.input({shape:[28,28,1]}));
+            //unit1
+            model.add(tf.layers.conv2d({ inputShape: [28, 28, 1], filters: 16, kernelSize: 5, strides: 1, activation: 'relu', kernetInitializer: 'varianceScaling', }));
+            // model.add(tf.layers.conv2d({ filters:16, kernelSize:3, activation:'relu',}));
+            model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2], }));
+
+            model.add(tf.layers.conv2d({ filters: 32, kernelSize: 5, strides: 1, activation: 'relu', kernetInitializer: 'varianceScaling', }));
+            model.add(tf.layers.maxPooling2d({ poolSize: [2, 2], strides: [2, 2], }));
+
+
+            //unit2
+            model.add(tf.layers.conv2d({ filters:64, kernelSize:3, activation:'relu', padding: 'same'}));
+            // model.add(tf.layers.conv2d({ filters:32, kernelSize:3, activation:'relu', padding: 'same'}));
+            model.add(tf.layers.maxPooling2d({ poolSize:2, strides: 2, padding:'same'}));
+            // // model.add(tf.layers.dropout({ rate:0.5 }));
+            // // //unit3
+            // model.add(tf.layers.conv2d({ filters:64, kernelSize:3, activation:'relu', padding: 'same'}));
+            model.add(tf.layers.conv2d({ filters:128, kernelSize:3, activation:'relu', padding: 'same'}));
+            model.add(tf.layers.maxPooling2d({ poolSize:2, strides: 2, padding:'same'}));
+            // // //unit4
+            // model.add(tf.layers.conv2d({ filters:128, kernelSize:3, activation:'relu', padding: 'same'}));
+            // model.add(tf.layers.conv2d({ filters:128, kernelSize:3, activation:'relu', padding: 'same'}));
+            // model.add(tf.layers.maxPooling2d({ poolSize:2, strides: 2, padding:'same'}));
+            // // model.add(tf.layers.dropout({ rate:0.5 }));
+            // // //unit5
+            // model.add(tf.layers.conv2d({ filters:256, kernelSize:3, activation:'relu', padding: 'same'}));
+            // model.add(tf.layers.conv2d({ filters:256, kernelSize:3, activation:'relu', padding: 'same'}));
+            // model.add(tf.layers.maxPooling2d({ poolSize:2, strides: 2, padding:'same'}));
+
+            model.add(tf.layers.dropout({ rate: 0.5 }));
+            //全连接层
+            model.add(tf.layers.flatten());
+            model.add(tf.layers.dense({ units: 128, activation: "relu" }));
+            // model.add(tf.layers.dropout({ rate:0.5 }));
+            // model.add(tf.layers.dense({ units: 128,activation: "relu"}));
+            // model.add(tf.layers.dropout({ rate:0.5 }));
+
+            //输出层
+            model.add(tf.layers.dense({ units: 10 }));
+
+            const optimizer = tf.train.adam(0.001);
+            model.compile({
+                loss: tf.losses.softmaxCrossEntropy,
+                // loss: "categoricalCrossentropy",
+                optimizer,
+                metrics: ['accuracy']
+            })
+
+            return model;
+        }
+
+
+    </script>
+</body>
+
+</html>
